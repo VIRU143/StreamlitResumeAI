@@ -7,7 +7,14 @@ import streamlit as st
 
 class VisualizationHelper:
     def __init__(self):
-        self.color_palette = px.colors.qualitative.Set3
+        # Modern color palette with vibrant gradients
+        self.color_palette = [
+            '#667eea', '#764ba2', '#f093fb', '#4facfe',
+            '#43e97b', '#fa709a', '#fee140', '#30cfd0',
+            '#a8edea', '#fed6e3', '#c471f5', '#fa71cd'
+        ]
+        self.primary_gradient = ['#667eea', '#764ba2']
+        self.secondary_gradient = ['#f093fb', '#4facfe']
     
     def create_confusion_matrix(self, confusion_matrix, class_names):
         """Create an interactive confusion matrix heatmap"""
@@ -16,7 +23,7 @@ class VisualizationHelper:
             labels=dict(x="Predicted", y="Actual", color="Count"),
             x=class_names,
             y=class_names,
-            color_continuous_scale='Blues',
+            color_continuous_scale=[[0, '#e0e7ff'], [0.5, '#818cf8'], [1, '#4f46e5']],
             aspect="auto"
         )
         
@@ -61,19 +68,19 @@ class VisualizationHelper:
             shared_yaxis=True
         )
         
-        # Add bars for each metric
+        # Add bars for each metric with gradient colors
         fig.add_trace(
-            go.Bar(x=classes, y=precision, name='Precision', marker_color='#FF6B6B'),
+            go.Bar(x=classes, y=precision, name='Precision', marker_color='#667eea'),
             row=1, col=1
         )
         
         fig.add_trace(
-            go.Bar(x=classes, y=recall, name='Recall', marker_color='#4ECDC4'),
+            go.Bar(x=classes, y=recall, name='Recall', marker_color='#764ba2'),
             row=1, col=2
         )
         
         fig.add_trace(
-            go.Bar(x=classes, y=f1_score, name='F1-Score', marker_color='#45B7D1'),
+            go.Bar(x=classes, y=f1_score, name='F1-Score', marker_color='#f093fb'),
             row=1, col=3
         )
         
@@ -115,14 +122,16 @@ class VisualizationHelper:
             name='Actual',
             x=df['Category'],
             y=df['Actual'],
-            marker_color='#FF6B6B'
+            marker_color='#667eea',
+            marker=dict(line=dict(width=0))
         ))
         
         fig.add_trace(go.Bar(
             name='Predicted',
             x=df['Category'],
             y=df['Predicted'],
-            marker_color='#4ECDC4'
+            marker_color='#764ba2',
+            marker=dict(line=dict(width=0))
         ))
         
         fig.update_layout(
@@ -145,8 +154,9 @@ class VisualizationHelper:
             x=max_confidence,
             nbinsx=20,
             name='Confidence Distribution',
-            marker_color='#45B7D1',
-            opacity=0.7
+            marker_color='#667eea',
+            opacity=0.8,
+            marker=dict(line=dict(width=0))
         ))
         
         fig.update_layout(
@@ -172,7 +182,8 @@ class VisualizationHelper:
                 y=features[::-1],  # Reverse for better readability
                 x=list(range(len(features), 0, -1)),  # Importance ranking
                 orientation='h',
-                marker_color='#FF6B6B',
+                marker_color='#667eea',
+                marker=dict(line=dict(width=0)),
                 name='Feature Importance'
             ))
             
@@ -205,7 +216,7 @@ class VisualizationHelper:
                    [{'type': 'indicator'}, {'type': 'indicator'}]]
         )
         
-        colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4']
+        colors = ['#667eea', '#764ba2', '#f093fb', '#4facfe']
         
         for i, (category, value, color) in enumerate(zip(categories, values, colors)):
             row = i // 2 + 1
@@ -216,19 +227,20 @@ class VisualizationHelper:
                 value=value * 100,  # Convert to percentage
                 domain={'x': [0, 1], 'y': [0, 1]},
                 gauge={
-                    'axis': {'range': [None, 100]},
-                    'bar': {'color': color},
+                    'axis': {'range': [None, 100], 'tickcolor': color},
+                    'bar': {'color': color, 'thickness': 0.75},
                     'steps': [
-                        {'range': [0, 50], 'color': "lightgray"},
-                        {'range': [50, 80], 'color': "yellow"},
-                        {'range': [80, 100], 'color': "lightgreen"}
+                        {'range': [0, 50], 'color': "rgba(102, 126, 234, 0.1)"},
+                        {'range': [50, 80], 'color': "rgba(102, 126, 234, 0.2)"},
+                        {'range': [80, 100], 'color': "rgba(102, 126, 234, 0.3)"}
                     ],
                     'threshold': {
-                        'line': {'color': "red", 'width': 4},
+                        'line': {'color': color, 'width': 3},
                         'thickness': 0.75,
                         'value': 90
                     }
-                }
+                },
+                number={'font': {'size': 32, 'color': color}}
             ), row=row, col=col)
         
         fig.update_layout(

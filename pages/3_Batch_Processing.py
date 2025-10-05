@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 from utils.resume_processor import ResumeProcessor
 from utils.visualizations import VisualizationHelper
+from utils.theme_helper import apply_theme
 import plotly.express as px
 import plotly.graph_objects as go
 from io import BytesIO
@@ -15,6 +16,9 @@ st.set_page_config(
     page_icon="📁",
     layout="wide"
 )
+
+# Apply theme
+apply_theme()
 
 st.title("📁 Batch Resume Processing")
 

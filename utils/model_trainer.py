@@ -105,8 +105,7 @@ class ModelTrainer:
             # Train logistic regression model
             self.model = LogisticRegression(
                 max_iter=1000,
-                random_state=random_state,
-                multi_class='ovr'
+                random_state=random_state
             )
             
             self.model.fit(X_train_tfidf, y_train)

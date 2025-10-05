@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 from utils.model_trainer import ModelTrainer
 from utils.visualizations import VisualizationHelper
+from utils.theme_helper import apply_theme
 import plotly.express as px
 
 # Page config
@@ -11,6 +12,9 @@ st.set_page_config(
     page_icon="🎯",
     layout="wide"
 )
+
+# Apply theme
+apply_theme()
 
 st.title("🎯 Model Training")
 

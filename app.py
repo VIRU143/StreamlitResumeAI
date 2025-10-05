@@ -3,40 +3,20 @@ import pandas as pd
 import numpy as np
 from utils.resume_processor import ResumeProcessor
 from utils.model_trainer import ModelTrainer
+from utils.theme_helper import apply_theme
 import plotly.express as px
 import plotly.graph_objects as go
 
 # Page configuration
 st.set_page_config(
     page_title="AI Resume Screening System",
-    page_icon="📄",
+    page_icon="🤖",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for better styling
-st.markdown("""
-<style>
-    .main-header {
-        font-size: 3rem;
-        font-weight: bold;
-        color: #FF6B6B;
-        text-align: center;
-        margin-bottom: 2rem;
-    }
-    .metric-card {
-        background-color: #f0f2f6;
-        padding: 1rem;
-        border-radius: 10px;
-        border-left: 4px solid #FF6B6B;
-    }
-    .stFileUploader > div > div > div > div {
-        background-color: #f8f9fa;
-        border: 2px dashed #FF6B6B;
-        border-radius: 10px;
-    }
-</style>
-""", unsafe_allow_html=True)
+# Apply theme
+apply_theme()
 
 def main():
     # Initialize session state
@@ -51,7 +31,7 @@ def main():
     st.markdown('<h1 class="main-header">🤖 AI Resume Screening System</h1>', unsafe_allow_html=True)
     
     # Sidebar navigation
-    st.sidebar.title("Navigation")
+    st.sidebar.title("📍 Navigation")
     st.sidebar.markdown("---")
     
     # Main dashboard content
