@@ -1,0 +1,212 @@
+# ============================================================
+# 📘 AI Resume Screening System (Without Job Description)
+# Author: Virendra Parmar
+# Description: Classifies resumes into job categories and ranks
+#              candidates based on AI-derived scores.
+# ============================================================
+
+# ---------- Import Libraries ----------
+import os
+import re
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+import docx2txt
+import PyPDF2
+import nltk
+from nltk.corpus import stopwords
+from nltk.stem import WordNetLemmatizer
+from sklearn.model_selection import train_test_split
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
+
+# ---------- NLTK Setup ----------
+nltk.download('stopwords')
+nltk.download('wordnet')
+
+stop_words = set(stopwords.words('english'))
+lemmatizer = WordNetLemmatizer()
+
+
+# ============================================================
+# 🧹 1. Resume Preprocessing Function
+# ============================================================
+
+def preprocess_resume(file_path):
+    """
+    Reads and cleans resume text from PDF, DOCX, or TXT.
+    Steps:
+      1. Extract text
+      2. Lowercase
+      3. Remove punctuation/numbers
+      4. Remove stopwords
+      5. Lemmatize words
+    """
+    text = ""
+
+    if file_path.endswith(".pdf"):
+        with open(file_path, 'rb') as f:
+            reader = PyPDF2.PdfReader(f)
+            for page in reader.pages:
+                text += page.extract_text() or ""
+    elif file_path.endswith(".docx"):
+        text = docx2txt.process(file_path)
+    elif file_path.endswith(".txt"):
+        with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+            text = f.read()
+    else:
+        raise ValueError("Unsupported file format. Use PDF, DOCX, or TXT.")
+
+    text = text.lower()
+    text = re.sub(r'[^a-z\s]', ' ', text)
+    words = [lemmatizer.lemmatize(w) for w in text.split() if w not in stop_words]
+    return " ".join(words)
+
+
+# ============================================================
+# 📂 2. Load Dataset (Resume Dataset by Gauravduttakiit)
+# ============================================================
+
+df = pd.read_csv("UpdatedResumeDataSet.csv")  # path to dataset
+print(f"✅ Dataset Loaded: {df.shape[0]} samples")
+print(df.head())
+
+# Columns are usually ['Category', 'Resume']
+df = df.rename(columns={"Category": "category", "Resume": "text"})
+
+# ============================================================
+# 🧼 3. Clean & Preprocess Data
+# ============================================================
+
+df["clean_text"] = df["text"].apply(lambda x: re.sub(r'[^a-zA-Z\s]', '', x.lower()))
+print("✅ Cleaned text samples ready.")
+
+
+# ============================================================
+# 🧠 4. Train-Test Split
+# ============================================================
+
+X_train, X_test, y_train, y_test = train_test_split(df["clean_text"], df["category"],
+                                                    test_size=0.2, random_state=42, stratify=df["category"])
+
+
+# ============================================================
+# 🔤 5. TF-IDF Vectorization
+# ============================================================
+
+vectorizer = TfidfVectorizer(max_features=5000)
+X_train_tfidf = vectorizer.fit_transform(X_train)
+X_test_tfidf = vectorizer.transform(X_test)
+
+
+# ============================================================
+# 🤖 6. Model Training (Logistic Regression)
+# ============================================================
+
+model = LogisticRegression(max_iter=1000)
+model.fit(X_train_tfidf, y_train)
+
+y_pred = model.predict(X_test_tfidf)
+print("\n✅ Model Training Complete!")
+print(f"Accuracy: {accuracy_score(y_test, y_pred):.2f}")
+print("\nClassification Report:\n", classification_report(y_test, y_pred))
+
+
+# ============================================================
+# 📊 7. Visualization – Confusion Matrix + Class Plot
+# ============================================================
+
+cm = confusion_matrix(y_test, y_pred, labels=model.classes_)
+plt.figure(figsize=(10, 8))
+sns.heatmap(cm, annot=True, fmt='d', cmap='Blues',
+            xticklabels=model.classes_, yticklabels=model.classes_)
+plt.title("Confusion Matrix - Resume Classification")
+plt.xlabel("Predicted")
+plt.ylabel("Actual")
+plt.show()
+
+# Colored Class Comparison Plot
+y_prob = model.predict_proba(X_test_tfidf)
+class_to_idx = {cat: i for i, cat in enumerate(model.classes_)}
+y_test_idx = pd.Series(y_test).map(class_to_idx)
+y_pred_idx = np.argmax(y_prob, axis=1)
+colors = plt.cm.get_cmap('tab10', len(model.classes_))
+
+plt.figure(figsize=(12, 6))
+for i, cat in enumerate(model.classes_):
+    plt.scatter(np.where(y_test_idx == i)[0], y_test_idx[y_test_idx == i],
+                color=colors(i), alpha=0.5, s=50, label=f'Actual: {cat}')
+    plt.scatter(np.where(y_pred_idx == i)[0], y_pred_idx[y_pred_idx == i],
+                color=colors(i), marker='x', s=70, label=f'Predicted: {cat}')
+plt.title("Predicted vs Actual Resume Classes")
+plt.xlabel("Sample Index")
+plt.ylabel("Class Index")
+plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+plt.tight_layout()
+plt.show()
+
+
+# ============================================================
+# 🧩 8. Ranking Function (AI-based)
+# ============================================================
+
+def get_top_features_per_class(model, vectorizer, n=20):
+    feature_names = np.array(vectorizer.get_feature_names_out())
+    top_feats = {}
+    for i, cls in enumerate(model.classes_):
+        sorted_idx = np.argsort(model.coef_[i])[::-1]
+        top_feats[cls] = feature_names[sorted_idx[:n]].tolist()
+    return top_feats
+
+top_features_per_class = get_top_features_per_class(model, vectorizer)
+
+
+def rank_resume_ai_based(file_path, model, vectorizer, top_features_per_class):
+    text = preprocess_resume(file_path)
+    X_vec = vectorizer.transform([text])
+    y_prob = model.predict_proba(X_vec)[0]
+    predicted_class = model.classes_[np.argmax(y_prob)]
+    confidence = max(y_prob)
+
+    # Ranking Logic
+    conf_score = confidence
+    word_count = len(text.split())
+    richness = min(word_count / 400, 1.0)
+    top_feats = top_features_per_class[predicted_class]
+    match_count = sum(1 for w in top_feats if w in text)
+    match_score = match_count / len(top_feats)
+    final_rank = 0.5 * conf_score + 0.3 * richness + 0.2 * match_score
+
+    print(f"\n📄 Resume: {os.path.basename(file_path)}")
+    print(f"🎯 Predicted Role: {predicted_class}")
+    print(f"📊 Confidence: {confidence*100:.2f}%")
+    print(f"🧠 Word Count: {word_count}")
+    print(f"🔥 Keyword Match: {match_score*100:.2f}%")
+    print(f"🏆 Final AI Rank Score: {final_rank*100:.2f}%")
+
+    return {
+        "Filename": os.path.basename(file_path),
+        "Predicted Class": predicted_class,
+        "Confidence": confidence,
+        "Word Count": word_count,
+        "Match Score": match_score,
+        "Final Rank": final_rank
+    }
+
+
+# ============================================================
+# 🚀 9. Test Ranking on Sample Resumes
+# ============================================================
+
+test_folder = "resume"
+results = []
+for file in os.listdir(test_folder):
+    if file.endswith(('.pdf', '.docx', '.txt')):
+        res = rank_resume_ai_based(os.path.join(test_folder, file), model, vectorizer, top_features_per_class)
+        results.append(res)
+
+if results:
+    df_rank = pd.DataFrame(results).sort_values(by="Final Rank", ascending=False)
+    print("\n🏆 Resume Ranking:\n", df_rank[["Filename", "Predicted Class", "Final Rank"]])
